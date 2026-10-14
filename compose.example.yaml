@@ -1,0 +1,28 @@
+# Для существующей установки перенесите публикацию порта 81 на cf-dns.
+# Пути ./data и ./letsencrypt должны указывать на СУЩЕСТВУЮЩИЕ данные NPM.
+services:
+  npm:
+    image: jc21/nginx-proxy-manager:2.16.0
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+  cf-dns:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - npm
+    ports:
+      - "81:8080"
+    environment:
+      NPM_URL: http://npm:81
+      NPM_SQLITE_PATH: /npm-data/database.sqlite
+      SYNC_INTERVAL_SECONDS: "60"
+    volumes:
+      - ./data:/npm-data:ro
+      - cf-dns-data:/data
+volumes:
+  cf-dns-data:

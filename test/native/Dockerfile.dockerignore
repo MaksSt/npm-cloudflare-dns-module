@@ -1,0 +1,16 @@
+.git
+.cache
+data
+secrets
+node_modules
+__pycache__
+*.pyc
+.env*
+*.ini
+*.sqlite*
+*.pem
+*.key
+docs/deployment.md
+scripts/*-remote*
+scripts/npm-maintenance.mjs
+scripts/migrate-legacy.mjs

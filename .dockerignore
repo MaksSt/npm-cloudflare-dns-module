@@ -1,0 +1,15 @@
+.git
+data
+secrets
+.env*
+.cache
+node_modules
+test
+scripts
+docs/deployment.md
+__pycache__
+*.pyc
+*.ini
+*.sqlite*
+*.key
+*.pem

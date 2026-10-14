@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Проверка синтаксиса
+        run: npm run check
+      - name: Тесты модуля
+        run: npm test
+      - name: Проверка Linux-установщика
+        run: python3 -m unittest discover -s test -p '*_test.py' -v
+      - name: Сборка Docker-модуля
+        run: docker build -t npm-cloudflare-dns-module:ci .
+      - name: Сборка native Linux-стенда
+        run: docker build -f test/native/Dockerfile -t npm-cf-dns-native-test:ci .
+      - name: Установка, restart и отключение на Linux/OpenRC
+        run: docker run --rm --init --sysctl net.ipv4.ip_unprivileged_port_start=1024 npm-cf-dns-native-test:ci

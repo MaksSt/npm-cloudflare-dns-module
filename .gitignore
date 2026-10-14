@@ -1,0 +1,32 @@
+node_modules/
+data/
+secrets/
+.env
+.env.*
+!.env.example
+.cache/
+coverage/
+*.log
+__pycache__/
+*.pyc
+
+# Credentials and runtime state, including accidental copies outside data/.
+cloudflare.ini
+*.sqlite
+*.sqlite-*
+*.pem
+*.key
+**/keys.json
+**/state.json
+**/key
+
+# Private operations for the local deployment; not part of the distributable module.
+docs/deployment.md
+scripts/inspect-remote.py
+scripts/preflight-remote.py
+scripts/prepare-remote.py
+scripts/disable-legacy-remote.py
+scripts/finalize-remote.py
+scripts/verify-records-remote.mjs
+scripts/npm-maintenance.mjs
+scripts/migrate-legacy.mjs

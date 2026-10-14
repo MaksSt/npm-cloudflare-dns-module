@@ -1,0 +1,32 @@
+.cf-dns-cell { min-width: 152px; white-space: nowrap; }
+.cf-dns-actions { display: flex; align-items: center; gap: 6px; }
+.cf-icon { position: relative; width: 38px; height: 38px; padding: 8px; border: 1px solid #68788e; border-radius: 6px; background: transparent; color: #66778d; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+[data-bs-theme="dark"] .cf-icon, .dark .cf-icon { color: #a9b8ca; }
+.cf-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.cf-icon[aria-pressed="true"] { color: #fff; background: #406b08; border-color: #406b08; }
+.cf-icon.cf-cloud[aria-pressed="true"] { background: #995309; border-color: #995309; }
+.cf-icon.cf-delete { color: #bd3541; }
+.cf-icon:disabled { opacity: .55; cursor: wait; }
+.cf-icon:focus-visible { outline: 3px solid #4299e1; outline-offset: 3px; }
+.cf-tooltip { position: fixed; padding: 8px 10px; border-radius: 5px; background: #111827; color: #fff; font: 12px/1.4 system-ui; width: max-content; max-width: min(240px, calc(100vw - 32px)); z-index: 2050; box-shadow: 0 2px 8px #0004; }
+.cf-tooltip[hidden] { display: none; }
+.cf-state { display: block; font-size: 11px; margin-top: 5px; max-width: 200px; white-space: normal; color: #64748b; }
+.cf-state.cf-error { color: #bd3541; }
+[data-bs-theme="dark"] .cf-state { color: #a9b8ca; }
+[data-bs-theme="dark"] .cf-state.cf-error, [data-bs-theme="dark"] .cf-icon.cf-delete { color: #f38a95; }
+.cf-settings-panel[hidden], .cf-default-hidden { display: none !important; }
+.cf-settings-panel { min-width: 0; }
+.cf-settings-panel:focus { outline: none; }
+.cf-settings-panel:focus-visible { outline: 3px solid #4299e1; outline-offset: -3px; }
+.cf-settings-tab { width: 100%; text-align: start; font: inherit; cursor: pointer; }
+.cf-settings-tab:focus-visible { outline: 3px solid #4299e1; outline-offset: -3px; }
+.cf-settings { margin: 0; padding: 24px; }
+.cf-settings h3 { margin-top: 0; }
+.cf-settings label { display: block; margin: 12px 0; }
+.cf-settings input[type="password"], .cf-settings input[type="text"] { box-sizing: border-box; display: block; width: 100%; max-width: 520px; padding: 10px 12px; margin-top: 6px; color: inherit; background: transparent; border: 1px solid #68788e; border-radius: 5px; }
+.cf-settings input[type="checkbox"] { margin-right: 8px; width: 18px; height: 18px; vertical-align: middle; }
+.cf-settings .cf-submit { min-height: 38px; padding: 8px 16px; margin: 6px 8px 6px 0; border: 0; border-radius: 5px; color: #fff; background: #406b08; cursor: pointer; }
+.cf-settings .cf-remove-token { background: #a62c38; }
+.cf-settings p { max-width: 720px; }
+.cf-notice { position: fixed; bottom: 24px; right: 24px; max-width: min(450px, calc(100vw - 48px)); background: #111827; color: #fff; padding: 16px; border-radius: 8px; z-index: 2000; box-shadow: 0 4px 24px #0004; }
+@media (max-width: 600px) { .cf-settings { padding: 16px; } .cf-dns-cell { min-width: 148px; } }

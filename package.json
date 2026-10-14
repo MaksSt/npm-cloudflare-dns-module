@@ -1,0 +1,14 @@
+{
+  "name": "npm-cloudflare-dns-module",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare DNS integration alongside the official Nginx Proxy Manager",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test",
+    "check": "node --check src/server.js && node --check src/core.js && node --check src/source.js && node --check public/module.js && node --check scripts/demo.js",
+    "demo": "node scripts/demo.js"
+  }
+}
