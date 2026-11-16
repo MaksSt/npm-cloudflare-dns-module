@@ -30,3 +30,5 @@ jobs:
         run: docker build -f test/native/Dockerfile -t npm-cf-dns-native-test:ci .
       - name: Установка, restart и отключение на Linux/OpenRC
         run: docker run --rm --init --sysctl net.ipv4.ip_unprivileged_port_start=1024 npm-cf-dns-native-test:ci
+      - name: Интеграция с официальным NPM (SQLite и MariaDB, Cloudflare mock)
+        run: sh scripts/integration-docker.sh

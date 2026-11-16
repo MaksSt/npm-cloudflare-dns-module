@@ -32,6 +32,18 @@ export class ApiSource {
       this.token = result.token; this.expires = Date.parse(result.expires);
       if (!Number.isFinite(this.expires)) this.expires = Date.now() + 60000;
     }
+    // NPM 2.17 умеет выдавать только выбранные хосты. Такой список нельзя
+    // считать полным: потерянные права не должны выглядеть как удаление хостов.
+    const userResponse = await fetch(new URL('/api/users/me?expand=permissions', this.url), {
+      headers: { Authorization: `Bearer ${this.token}` }, signal: AbortSignal.timeout(15000), redirect: 'error'
+    });
+    if (userResponse.status === 401) this.token = null;
+    if (!userResponse.ok) throw new AppError('API NPM: проверка прав сервисной учётной записи недоступна', 502);
+    const user = await userResponse.json();
+    if (user.is_disabled || user.is_deleted || user.permissions?.visibility !== 'all' ||
+        !['view', 'manage'].includes(user.permissions?.proxy_hosts)) {
+      throw new AppError('Сервисной учётной записи NPM нужен просмотр всех Proxy Hosts (visibility: all)', 502);
+    }
     const response = await fetch(new URL('/api/nginx/proxy-hosts', this.url), {
       headers: { Authorization: `Bearer ${this.token}` }, signal: AbortSignal.timeout(15000), redirect: 'error'
     });

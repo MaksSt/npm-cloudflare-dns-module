@@ -37,6 +37,7 @@ test('API source обновляет token, сохраняет пробелы п�
       return res.end(JSON.stringify({ token: `token-${logins}`, expires: new Date(Date.now() + 3600000).toISOString() }));
     }
     if (rejectToken) { res.writeHead(401); return res.end('{}'); }
+    if (req.url === '/api/users/me?expand=permissions') return res.end(JSON.stringify({ permissions: { visibility: 'all', proxy_hosts: 'view' } }));
     return res.end(JSON.stringify([{ id: 1, created_on: '2026-01-01', domain_names: ['app.example.com', 'www.example.com'] }]));
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -45,6 +46,27 @@ test('API source обновляет token, сохраняет пробелы п�
   assert.deepEqual((await source.list())[0].domains, ['app.example.com', 'www.example.com']);
   await source.list(); assert.equal(logins, 1);
   source.expires = 0; await source.list(); assert.equal(logins, 2);
-  rejectToken = true; await assert.rejects(source.list(), /список хостов/); assert.equal(source.token, null);
+  rejectToken = true; await assert.rejects(source.list(), /проверка прав/); assert.equal(source.token, null);
   rejectToken = false; await source.list(); assert.equal(logins, 3);
+});
+
+test('API source отказывается считать ограниченный список NPM 2.17 полным', async t => {
+  let permissions = { visibility: 'user', proxy_hosts: 'view', meta: { proxy_host_ids: [1] } };
+  let lists = 0;
+  const server = http.createServer((req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    if (req.url === '/api/users/me?expand=permissions') return res.end(JSON.stringify({ permissions }));
+    lists++; res.end('[]');
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => { server.closeAllConnections(); server.close(resolve); }));
+  const source = new ApiSource(`http://127.0.0.1:${server.address().port}`);
+  source.token = 'cached'; source.expires = Date.now() + 3600000;
+  await assert.rejects(source.list(), /просмотр всех Proxy Hosts/);
+  permissions = { visibility: 'all', proxy_hosts: 'hidden' };
+  await assert.rejects(source.list(), /просмотр всех Proxy Hosts/);
+  assert.equal(lists, 0);
+  permissions = { visibility: 'all', proxy_hosts: 'view' };
+  assert.deepEqual(await source.list(), []);
+  assert.equal(lists, 1);
 });

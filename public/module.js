@@ -71,6 +71,7 @@
       try { return `${value.startsWith('*.') ? '*.' : ''}${new URL(`http://${value.replace(/^\*\./, '')}`).hostname}`; }
       catch { return value; }
     });
+    if (!names.length || new Set(names).size !== names.length) return null;
     const matches = snapshot.hosts.filter(h => h.domains.length === names.length && h.domains.every(d => names.includes(d)));
     return matches.length === 1 ? matches[0] : null;
   }
@@ -78,14 +79,21 @@
     if (!snapshot || !route().includes('/nginx/proxy')) return;
     for (const table of document.querySelectorAll('table')) {
       const rows = [...table.querySelectorAll('tbody tr')];
-      const mapped = rows.map(row => [row, rowHost(row)]).filter(([, host]) => host);
-      if (!mapped.length) continue;
+      const mapped = rows.map(row => [row, rowHost(row)]);
+      // React переиспользует строки после редактирования/фильтрации. Устаревшая
+      // кнопка не должна продолжать обращаться к прежнему host.id.
+      for (const [row, host] of mapped) if (!host) row.querySelector('[data-cf-cell]')?.remove();
+      if (!mapped.some(([, host]) => host)) {
+        table.querySelector('[data-cf-header]')?.remove();
+        continue;
+      }
       const head = table.querySelector('thead tr');
       if (head && !head.querySelector('[data-cf-header]')) {
         const th = document.createElement('th'); th.dataset.cfHeader = ''; th.textContent = 'CF DNS'; th.scope = 'col';
         head.insertBefore(th, head.lastElementChild);
       }
       for (const [row, host] of mapped) {
+        if (!host) continue;
         const signature = JSON.stringify([host, busy, snapshot.config.tokenConfigured]);
         let cell = row.querySelector('[data-cf-cell]');
         if (cell?.dataset.signature === signature) continue;

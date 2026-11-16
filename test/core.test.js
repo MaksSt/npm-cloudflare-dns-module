@@ -195,3 +195,16 @@ test('заданный IP endpoint поддерживает JSON-строку и
   assert.deepEqual(calls, ['https://direct.example/ip']);
   await assert.rejects(detectIPv4(async url => { assert.equal(url, 'https://direct.example/ip'); return new Response('invalid'); }, ['https://direct.example/ip']), /Не удалось/);
 });
+
+test('ошибка источника сохраняет настройки и DNS, восстановление продолжает Sync', async t => {
+  const { engine, records, calls, store } = await setup(t);
+  await engine.update(1, { sync: true }); await engine.reconcile();
+  const list = engine.source.list;
+  const before = JSON.stringify(store.state); const writes = calls.length;
+  engine.source.list = async () => { throw new Error('permissions lost'); };
+  await engine.reconcile();
+  assert.ok(engine.error); assert.equal(calls.length, writes);
+  assert.equal(JSON.stringify(store.state), before); assert.equal(records.size, 1);
+  engine.source.list = list; await engine.reconcile();
+  assert.equal(engine.error, null); assert.equal(store.state.hosts[1].sync, true);
+});

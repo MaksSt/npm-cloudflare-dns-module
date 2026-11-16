@@ -58,7 +58,7 @@ volumes:
 
 `./data` должен быть **тем же существующим каталогом данных NPM**, относительно вашего Compose. При named volume подключите тот же volume второму сервису read-only. Монтируется весь каталог, чтобы были видны SQLite WAL/SHM. Пользователь `node` модуля должен иметь право читать базу и каталог; модуль не исправляет разрешения данных NPM.
 
-[compose.example.yaml](compose.example.yaml) содержит полный пример для отдельного стенда с официальным NPM 2.16.0. Не запускайте его с новым пустым `./data` вместо данных работающей установки.
+[compose.example.yaml](compose.example.yaml) содержит полный пример для отдельного стенда с официальным NPM 2.17.0. Не запускайте его с новым пустым `./data` вместо данных работающей установки.
 
 Если админка опубликована через ещё один reverse proxy, направьте его upstream на `cf-dns:8080` и проксируйте также `/__cf/`. Заголовок `Host` должен соответствовать origin браузера. CSP должна разрешать скрипты и CSS с того же origin: модуль не отключает CSP. Для передачи токена используйте защищённый административный канал (HTTPS/VPN).
 
@@ -80,7 +80,7 @@ AAAA не меняются и не удаляются; при Sync ON налич
 
 ## NPM с MariaDB/MySQL
 
-SQLite — основной вариант. Для внешней базы можно использовать API NPM без прямого подключения к MariaDB. Создайте отдельную сервисную учётную запись NPM, имеющую просмотр **всех** Proxy Hosts, и передайте identity/пароль файлами Docker secrets. Для этой учётной записи API login должен работать без 2FA; обычные администраторы интерфейса могут использовать 2FA.
+SQLite — основной вариант. Для внешней базы можно использовать API NPM без прямого подключения к MariaDB. Создайте отдельную сервисную учётную запись NPM с `visibility: all` и `proxy_hosts: view` или `manage`, имеющую просмотр **всех** Proxy Hosts, и передайте identity/пароль файлами Docker secrets. Для этой учётной записи API login должен работать без 2FA; обычные администраторы интерфейса могут использовать 2FA.
 
 ```yaml
 services:
@@ -102,11 +102,13 @@ secrets:
     file: ./secrets/npm_secret
 ```
 
+В NPM 2.17 можно разрешать просмотр отдельных Proxy Hosts. Такой доступ для worker недостаточен: перед каждым чтением модуль проверяет `/api/users/me?expand=permissions` и при ограничении доступа прекращает цикл с ошибкой, сохраняя настройки и DNS.
+
 В этом режиме read-only mount данных NPM не нужен. API token сервисной учётной записи хранится только в памяти и автоматически обновляется входом по credentials. Файлы secrets исключены из Git.
 
 ## Обновление и отключение
 
-Точки интеграции проверены по исходникам официального **NPM 2.16.0**: `/api/users/me`, `/api/nginx/proxy-hosts`, SQLite `proxy_host`, `localStorage.authentications`, `.domain-name` и меню внутри Settings card. Модуль не встраивает сборку frontend NPM и не требует повторного патча его файлов при обновлении образа.
+Точки интеграции проверены по исходникам официального **NPM 2.17.0** (`v2.17.0`, commit `5c8aec9bdeca0a2fb6a71e060ec598aa6eddd186`): `/api/users/me`, `/api/nginx/proxy-hosts`, SQLite `proxy_host`, `localStorage.authentications`, `.domain-name` и меню внутри Settings card. Модуль не встраивает сборку frontend NPM и не требует повторного патча его файлов при обновлении образа.
 
 Совместимость со всеми будущими версиями заранее не гарантируется: изменение этих контрактов потребует обновления `source.js` или `public/module.js`. Фоновая синхронизация не зависит от разметки UI. При неизвестной/неоднозначной строке адаптер не добавляет к ней кнопки, чтобы не менять чужой хост. Ошибка чтения source прекращает текущий цикл записи и показывается в настройках. Перед переходом на новый NPM проверьте на стенде: вход, Settings, таблицу/сортировку, хост с несколькими доменами и один полный цикл worker.
 
@@ -133,13 +135,26 @@ docker run --rm --init \
   npm-cf-dns-native-test
 ```
 
-Выполнены `npm run check`, 19 Node.js-тестов и 5 Python-проверок native installer. В браузере изолированного стенда проверены desktop render, мобильная ширина 390 px, горизонтальная прокрутка таблицы, Sync/Proxy, сортировка строк, подсказка и Escape, сохранение настроек, отмена/подтверждение удаления для хоста с двумя доменами, вкладки Settings и навигация стрелками.
+Проверка совместимости от 17.11.2026: официальный GitHub API `releases/latest` вернул стабильный **v2.17.0**, опубликованный 12.11.2026. Выполнены `npm run check`, 21 Node.js-тест и 5 Python-проверок. Docker-модуль собирается; native-стенд с nginx/OpenRC проходит установку, restart и отключение. Предупреждение OpenRC о read-only cgroup внутри тестового контейнера не помешало lifecycle-проверкам; полноценный systemd lifecycle не проверялся.
 
-Docker-вариант установлен и проверен рядом с официальным NPM 2.16.0: авторизация, worker, восстановление после restart, nginx config и сохранение реальных Cloudflare-записей проверены в целевой среде. Native-установщик проверен с реальным nginx/OpenRC в изолированной Linux-среде: установка, непривилегированный процесс с правом bind порта 81, gateway, SQLite, restart и отключение. Это не проверка нативной установки самого NPM на каждой поддерживаемой Linux-системе; systemd lifecycle отдельно не проверялся.
+Официальный Docker image `jc21/nginx-proxy-manager:2.17.0` проверен изолированно с одноразовыми SQLite и MariaDB: gateway и подключение JS/CSS, настоящие login/API и отказ обычному пользователю, чтение Proxy Hosts, Settings, Sync/Proxy/удаление, повторный цикл и восстановление зашифрованных настроек. Cloudflare проверялся через локальную HTTP API-заглушку в Docker-сети без внешнего доступа; реальные DNS-записи тесты не меняют. Это не проверка реального Cloudflare API и не проверка production.
+
+В Chromium проверены desktop 1440×900 и mobile 390×844 официального frontend: таблица, сортировка, Sync/Proxy, отмена/подтверждение удаления, tooltip/Escape, Settings/save и клавиатурное переключение вкладок. Проверено удаление старых кнопок при повторном использовании DOM строки с неизвестным набором доменов. Изменение схемы состояния не требуется; формат version 1, ключ и токен сохраняются.
+
+Воспроизводимая проверка обоих backend (требуется Docker; создаёт и удаляет только собственные одноразовые контейнеры/volumes, не публикует порты):
+
+```sh
+sh scripts/integration-docker.sh
+# Для проверки прежнего релиза:
+TEST_NPM_VERSION=2.16.0 sh scripts/integration-docker.sh
+```
+
+`integration-npm.mjs` запускается только с `TEST_DISPOSABLE=yes` и `TEST_NPM_URL`, **создаёт пользователей и Proxy Hosts** и предназначен исключительно для пустого стенда. `TEST_SQLITE_PATH` включает сверку API с SQLite. `TEST_BROWSER=yes` оставляет gateway на порту 8080 и периодический worker для отдельного `scripts/integration-browser.cjs`; последний требует Playwright 1.56.1 и Chromium вне зависимостей модуля, `TEST_GATEWAY_URL` и при необходимости `PLAYWRIGHT_MODULE`. Браузерный сценарий также меняет данные стенда; на production его запускать нельзя.
 
 ## Первичные источники
 
 - [Официальная установка NPM](https://nginxproxymanager.com/setup/)
+- [Проверенный релиз NPM v2.17.0](https://github.com/NginxProxyManager/nginx-proxy-manager/releases/tag/v2.17.0)
 - [Исходники NPM](https://github.com/NginxProxyManager/nginx-proxy-manager)
 - [Создание Cloudflare API Token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/)
 - [Создание DNS record](https://developers.cloudflare.com/api/resources/dns/subresources/records/methods/create/)
