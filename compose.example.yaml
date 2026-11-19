@@ -2,7 +2,7 @@
 # Пути ./data и ./letsencrypt должны указывать на СУЩЕСТВУЮЩИЕ данные NPM.
 services:
   npm:
-    image: jc21/nginx-proxy-manager:2.17.0
+    image: jc21/nginx-proxy-manager:2.17.1
     restart: unless-stopped
     ports:
       - "80:80"

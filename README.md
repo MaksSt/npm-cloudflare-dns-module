@@ -58,7 +58,7 @@ volumes:
 
 `./data` должен быть **тем же существующим каталогом данных NPM**, относительно вашего Compose. При named volume подключите тот же volume второму сервису read-only. Монтируется весь каталог, чтобы были видны SQLite WAL/SHM. Пользователь `node` модуля должен иметь право читать базу и каталог; модуль не исправляет разрешения данных NPM.
 
-[compose.example.yaml](compose.example.yaml) содержит полный пример для отдельного стенда с официальным NPM 2.17.0. Не запускайте его с новым пустым `./data` вместо данных работающей установки.
+[compose.example.yaml](compose.example.yaml) содержит полный пример для отдельного стенда с официальным NPM 2.17.1. Не запускайте его с новым пустым `./data` вместо данных работающей установки.
 
 Если админка опубликована через ещё один reverse proxy, направьте его upstream на `cf-dns:8080` и проксируйте также `/__cf/`. Заголовок `Host` должен соответствовать origin браузера. CSP должна разрешать скрипты и CSS с того же origin: модуль не отключает CSP. Для передачи токена используйте защищённый административный канал (HTTPS/VPN).
 
@@ -108,7 +108,7 @@ secrets:
 
 ## Обновление и отключение
 
-Точки интеграции проверены по исходникам официального **NPM 2.17.0** (`v2.17.0`, commit `5c8aec9bdeca0a2fb6a71e060ec598aa6eddd186`): `/api/users/me`, `/api/nginx/proxy-hosts`, SQLite `proxy_host`, `localStorage.authentications`, `.domain-name` и меню внутри Settings card. Модуль не встраивает сборку frontend NPM и не требует повторного патча его файлов при обновлении образа.
+Точки интеграции проверены по исходникам официального **NPM 2.17.1** (`v2.17.1`, commit `89c43f564422a78bd0732046b636cbcd5e566b03`): `/api/users/me`, `/api/nginx/proxy-hosts`, SQLite `proxy_host`, `localStorage.authentications`, `.domain-name` и меню внутри Settings card. Модуль не встраивает сборку frontend NPM и не требует повторного патча его файлов при обновлении образа.
 
 Совместимость со всеми будущими версиями заранее не гарантируется: изменение этих контрактов потребует обновления `source.js` или `public/module.js`. Фоновая синхронизация не зависит от разметки UI. При неизвестной/неоднозначной строке адаптер не добавляет к ней кнопки, чтобы не менять чужой хост. Ошибка чтения source прекращает текущий цикл записи и показывается в настройках. Перед переходом на новый NPM проверьте на стенде: вход, Settings, таблицу/сортировку, хост с несколькими доменами и один полный цикл worker.
 
@@ -141,12 +141,16 @@ docker run --rm --init \
 
 В Chromium проверены desktop 1440×900 и mobile 390×844 официального frontend: таблица, сортировка, Sync/Proxy, отмена/подтверждение удаления, tooltip/Escape, Settings/save и клавиатурное переключение вкладок. Проверено удаление старых кнопок при повторном использовании DOM строки с неизвестным набором доменов. Изменение схемы состояния не требуется; формат version 1, ключ и токен сохраняются.
 
+Дополнительная проверка от 19.11.2026: последний стабильный релиз — **NPM 2.17.1**. Официальный образ содержит backport исправлений CVE-2026-123007 и CVE-2026-123633 в OpenResty 1.31.8.1; один только прежний баннер `nginx -v` не доказывает отсутствие/наличие исправлений. Проверяйте официальный image digest и [исходники сборки OpenResty](https://github.com/NginxProxyManager/docker-nginx-full/blob/38654e0736c19578e0045678480622e48473878c/docker/scripts/build-openresty.sh). Патчи NPM или изменения схемы состояния адаптера не потребовались.
+
+Проверка Docker ниже также обновляет одноразовую SQLite с NPM 2.17.0 до выбранной версии: сверяет хосты, пользователей, авторизацию, права и настройки, read-only источник и повторный login. Состояние, ключ и токен модуля проверяются после повторного открытия. `TEST_UPGRADE_FROM` задаёт исходную версию. Для Certbot выполняется установка Cloudflare через штатную `installPlugin` NPM, `pip check`, проверка регистрации плагина и DNS-01 perform/cleanup с подменённым DNS-клиентом. Дополнительно официальный образ проверяется с тестовым TLS-сертификатом: HTTP/2 и HTTP/1.1 должны успешно согласовываться с проверкой доверия сертификату. Это функциональная проверка, а не эксплуатация CVE. Для NPM 2.17.1 проверены Certbot и certbot-dns-cloudflare **5.10.0**. Установка скачивает пакеты в одноразовый контейнер; проверка не выпускает сертификат через ACME и не меняет реальные DNS-записи. API/worker тестируются в закрытой Docker-сети; MariaDB проверяется на целевой версии NPM.
+
 Воспроизводимая проверка обоих backend (требуется Docker; создаёт и удаляет только собственные одноразовые контейнеры/volumes, не публикует порты):
 
 ```sh
 sh scripts/integration-docker.sh
-# Для проверки прежнего релиза:
-TEST_NPM_VERSION=2.16.0 sh scripts/integration-docker.sh
+# Для проверки прежнего релиза (без понижения SQLite):
+TEST_UPGRADE_FROM=2.16.0 TEST_NPM_VERSION=2.16.0 sh scripts/integration-docker.sh
 ```
 
 `integration-npm.mjs` запускается только с `TEST_DISPOSABLE=yes` и `TEST_NPM_URL`, **создаёт пользователей и Proxy Hosts** и предназначен исключительно для пустого стенда. `TEST_SQLITE_PATH` включает сверку API с SQLite. `TEST_BROWSER=yes` оставляет gateway на порту 8080 и периодический worker для отдельного `scripts/integration-browser.cjs`; последний требует Playwright 1.56.1 и Chromium вне зависимостей модуля, `TEST_GATEWAY_URL` и при необходимости `PLAYWRIGHT_MODULE`. Браузерный сценарий также меняет данные стенда; на production его запускать нельзя.
@@ -154,7 +158,7 @@ TEST_NPM_VERSION=2.16.0 sh scripts/integration-docker.sh
 ## Первичные источники
 
 - [Официальная установка NPM](https://nginxproxymanager.com/setup/)
-- [Проверенный релиз NPM v2.17.0](https://github.com/NginxProxyManager/nginx-proxy-manager/releases/tag/v2.17.0)
+- [Проверенный релиз NPM v2.17.1](https://github.com/NginxProxyManager/nginx-proxy-manager/releases/tag/v2.17.1)
 - [Исходники NPM](https://github.com/NginxProxyManager/nginx-proxy-manager)
 - [Создание Cloudflare API Token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/)
 - [Создание DNS record](https://developers.cloudflare.com/api/resources/dns/subresources/records/methods/create/)
